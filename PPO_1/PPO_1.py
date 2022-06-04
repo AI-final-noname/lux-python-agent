@@ -105,9 +105,6 @@ def train(args):
         model.learn(total_timesteps=args.step_count,
                     callback=callbacks)
         print('Done Training model.')
-        if not os.path.exists(f'models//PPO_model_1/rl_PPOmodel_{i}_{args.step_count}_steps.zip'):
-            model.save(
-                path=f'models//PPO_model_1/rl_PPOmodel_{i}_{args.step_count}_steps.zip')
 
         opponent = AgentPolicy(mode="inference", model=model)
 
