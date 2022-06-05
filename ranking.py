@@ -42,6 +42,8 @@ def rank(directories, matches):
 
     def battle(agent_i, agent_j):
         configs = LuxMatchConfigs_Default
+        configs["width"] = 12
+        configs["height"] = 12
         env = LuxEnvironment(configs=configs,
                              learning_agent=agent_i,
                              opponent_agent=agent_j)
