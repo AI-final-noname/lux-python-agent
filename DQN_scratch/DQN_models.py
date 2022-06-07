@@ -81,7 +81,7 @@ class Net(nn.Module):
         return q_values
 
 
-class DDQN():
+class DQN():
     def __init__(self, env, epsilon=0.05, learning_rate=0.0001, GAMMA=0.99, batch_size=32, capacity=10000):
         """
         Hyperparameters:
@@ -171,7 +171,7 @@ class DDQN():
             action = self.choose_action(state)
             obs, reward, done, _ = self.env.step(action)
             self.buffer.insert(state, int(action), reward, obs, int(done))
-            if self.count >= 10000:
+            if self.count >= 1000:
                 self.learn()
             if done:
                 self.env.reset()
@@ -189,4 +189,46 @@ class DDQN():
     def load(self, path):  # ranking
         pass
 
-        # super().__init__()
+
+class DDQN(DQN):
+    def learn(self):
+        if self.count % 100 == 0:
+            self.target_net.load_state_dict(self.evaluate_net.state_dict())
+
+        # Compute the mask
+        states, actions, rewards, next_states, done \
+            = self.buffer.sample(self.batch_size)
+        non_final_mask = torch.tensor(
+            tuple(map(lambda d: not d, done)), dtype=torch.bool)
+        non_final_next_states_list \
+            = [next_states[i] for i in range(self.batch_size) if non_final_mask[i]]
+        non_final_next_states = torch.tensor(
+            np.array(non_final_next_states_list), dtype=torch.float)
+        states_batch = torch.tensor(
+            np.array(states), dtype=torch.float)
+        actions_batch = torch.tensor(np.array(actions))
+        rewards_batch = torch.tensor(
+            np.array(rewards), dtype=torch.float)
+
+        # Get result from evaluation net
+        evaluated_values = self.evaluate_net.forward(states_batch) \
+            .gather(1, torch.unsqueeze(actions_batch, 1)) \
+            .squeeze(1)
+
+        # Get result from target net
+        next_states_values = torch.zeros(self.batch_size)
+        next_states_values_actions = self.evaluate_net.forward(
+            non_final_next_states).argmax(1)
+        next_states_values[non_final_mask] \
+            = self.target_net.forward(non_final_next_states) \
+            .gather(1, torch.unsqueeze(next_states_values_actions, 1)) \
+            .squeeze(1)
+        target_values = self.gamma * next_states_values + rewards_batch
+
+        # Compute the loss
+        criterion = nn.MSELoss()
+        loss = criterion(target_values, evaluated_values)
+        # Minimize the loss
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()

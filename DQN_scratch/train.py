@@ -70,6 +70,8 @@ def train(args):
     """
     # Run a training job
     configs = LuxMatchConfigs_Default
+    configs["width"] = 12
+    configs["height"] = 12
     opponent = Agent()
     for i in range(2):
         player = AgentPolicy(mode='train')
@@ -84,7 +86,26 @@ def train(args):
         model.train(step_count=1000)
         print('Done Training model.')
 
-        opponent = AgentPolicy(mode="inference", model=model)
+        # opponent = AgentPolicy(mode="inference", model=model)
+
+        # player_replay = AgentPolicy(mode='inference', model=model)
+        # new_env = LuxEnvironment(configs=configs,
+        #                          learning_agent=player_replay,
+        #                          opponent_agent=opponent)
+        # new_env.game.configs["seed"] = 0x1
+        #
+        # new_env.set_replay_path('.', f'tmp_{i}')
+        # try:
+        #     new_env.reset()  # Runs  a whole game because no training agent is attached
+        # except StopIteration:
+        #     # Game finished successfully
+        #     pass
+        # except Exception as e:
+        #     # Failure
+        #     print("Replay environment failed.")
+        #     print(repr(e))
+        #     print(''.join(traceback.format_exception(None, e, e.__traceback__)))
+        #     pass
 
         # env=LuxEnvironment(configs=configs,
         #                  learning_agent=AgentPolicy(
