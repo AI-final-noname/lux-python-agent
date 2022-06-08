@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from luxai2021.env.lux_env import LuxEnvironment
-from utilities import ReplayBuffer, Net
+from utilities import ReplayBuffer, Net, PriortizedMemory
 
 
 class DQN():
@@ -152,6 +152,62 @@ class DDQN(DQN):
         # Compute the loss
         criterion = nn.MSELoss()
         loss = criterion(target_values, evaluated_values)
+        # Minimize the loss
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+
+class PrioritizedReplayDDQN(DQN):
+    def __init__(self, env, epsilon=0.05, learning_rate=0.0001, GAMMA=0.99, batch_size=32, capacity=10000):
+        super().__init__(env, epsilon, learning_rate,
+                         GAMMA, batch_size, capacity)
+        self.buffer = PriortizedMemory(self.capacity)
+
+    def learn(self):
+        if self.count % 100 == 0:
+            self.target_net.load_state_dict(self.evaluate_net.state_dict())
+
+        # Compute the mask
+        batch, idxs, is_weights \
+            = self.buffer.sample(self.batch_size)
+        states, actions, rewards, next_states, done = zip(*batch)
+        non_final_mask = torch.tensor(
+            tuple(map(lambda d: not d, done)), dtype=torch.bool)
+        non_final_next_states_list \
+            = [next_states[i] for i in range(self.batch_size) if non_final_mask[i]]
+        non_final_next_states = torch.tensor(
+            np.array(non_final_next_states_list), dtype=torch.float)
+        states_batch = torch.tensor(
+            np.array(states), dtype=torch.float)
+        actions_batch = torch.tensor(np.array(actions))
+        rewards_batch = torch.tensor(
+            np.array(rewards), dtype=torch.float)
+
+        # Get result from evaluation net
+        evaluated_values = self.evaluate_net.forward(states_batch) \
+            .gather(1, torch.unsqueeze(actions_batch, 1)) \
+            .squeeze(1)
+
+        # Get result from target net
+        next_states_values = torch.zeros(self.batch_size)
+        next_states_values_actions = self.evaluate_net.forward(
+            non_final_next_states).argmax(1)
+        next_states_values[non_final_mask] \
+            = self.target_net.forward(non_final_next_states) \
+            .gather(1, torch.unsqueeze(next_states_values_actions, 1)) \
+            .squeeze(1)
+        target_values = self.gamma * next_states_values + rewards_batch
+
+        # Update priority
+        errors = torch.abs(evaluated_values - target_values).data.numpy()
+        for i in range(self.batch_size):
+            self.buffer.update(idxs[i], errors[i])
+
+        # Compute the loss
+        criterion = nn.MSELoss()
+        loss = (torch.FloatTensor(is_weights) *
+                criterion(target_values, evaluated_values)).mean()
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()

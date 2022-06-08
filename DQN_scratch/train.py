@@ -13,7 +13,7 @@ from agent_policy import AgentPolicy
 from luxai2021.env.agent import Agent
 from luxai2021.env.lux_env import LuxEnvironment, SaveReplayAndModelCallback
 from luxai2021.game.constants import LuxMatchConfigs_Default
-from DQN_models import DDQN
+from DQN_models import DDQN, PrioritizedReplayDDQN
 
 
 # https://stable-baselines3.readthedocs.io/en/master/guide/examples.html?highlight=SubprocVecEnv#multiprocessing-unleashing-the-power-of-vectorized-environments
@@ -80,10 +80,10 @@ def train(args):
                              learning_agent=player,
                              opponent_agent=opponent)
 
-        model = DDQN(env)
+        model = PrioritizedReplayDDQN(env)
 
         print('Training model...')
-        model.train(step_count=1000)
+        model.train(step_count=10000)
         print('Done Training model.')
 
         # opponent = AgentPolicy(mode="inference", model=model)

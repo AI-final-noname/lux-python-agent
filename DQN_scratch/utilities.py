@@ -95,8 +95,8 @@ class SumTree:
 
     def __init__(self, capacity):
         self.capacity = capacity
-        self.tree = np.zero(2 * capacity - 1, dtype=Node)
-        self.data = np.zero(capacity, dtype=object)
+        self.tree = [self.Node() for i in range(2 * capacity - 1)]
+        self.data = [None for i in range(capacity)]
         self.n_entries = 0
         self.pointer = 0
 
@@ -176,9 +176,11 @@ class PriortizedMemory:
     def _get_priority(self, error):
         return np.power((np.abs(error) + self.epsilon), self.alpha)
 
-    def add(self, error, sample):
-        p = self._get_priority(error)
-        self.tree.add(p, sample)
+    def insert(self, state, action, reward, next_state, done):
+        p = self.tree.max_p
+        if p == 0:
+            p = self.abs_err_upper
+        self.tree.add(p, [state, action, reward, next_state, done])
 
     def sample(self, n):
         batch = []
@@ -198,7 +200,7 @@ class PriortizedMemory:
             batch.append(data)
             idxs.append(idx)
 
-        sampling_probabilities = priorities / self.tree.total_p
+        sampling_probabilities = np.array(priorities) / self.tree.total_p
         is_weight = np.power(self.tree.n_entries *
                              sampling_probabilities, -self.beta)
         is_weight /= is_weight.max()
