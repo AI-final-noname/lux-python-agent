@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from luxai2021.env.lux_env import LuxEnvironment
-from utilities import replay_buffer, Net
+from utilities import ReplayBuffer, Net
 
 
 class DQN():
@@ -26,7 +26,7 @@ class DQN():
         self.batch_size = batch_size
         self.capacity = capacity
 
-        self.buffer = replay_buffer(self.capacity)
+        self.buffer = ReplayBuffer(self.capacity)
         # the evaluate network
         self.evaluate_net = Net(
             self.env.learning_agent.observation_shape[0], self.n_actions)
