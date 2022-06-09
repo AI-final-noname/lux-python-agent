@@ -6,7 +6,7 @@ import random
 
 import numpy as np
 from gym import spaces
-
+#from luxai2021.game.constants import Constants
 from luxai2021.env.agent import Agent, AgentWithModel
 from luxai2021.game.actions import *
 from luxai2021.game.game_constants import GAME_CONSTANTS
@@ -17,9 +17,12 @@ from luxai2021.game.position import Position
 def closest_node(node, nodes):
     dist_2 = np.sum((nodes - node) ** 2, axis=1)
     return np.argmin(dist_2)
+
+
 def furthest_node(node, nodes):
     dist_2 = np.sum((nodes - node) ** 2, axis=1)
     return np.argmax(dist_2)
+
 
 def smart_transfer_to_nearby(game, team, unit_id, unit, target_type_restriction=None, **kwarg):
     """
@@ -52,7 +55,6 @@ def smart_transfer_to_nearby(game, team, unit_id, unit, target_type_restriction=
         unit_cell = game.map.get_cell_by_pos(unit.pos)
         adjacent_cells = game.map.get_adjacent_cells(unit_cell)
 
-        
         for c in adjacent_cells:
             for id, u in c.units.items():
                 # Apply the unit type target restriction
@@ -67,27 +69,27 @@ def smart_transfer_to_nearby(game, team, unit_id, unit, target_type_restriction=
                             if target_unit.type == u.type:
                                 # Transfer to the target with the least capacity, but can accept
                                 # all of our resources
-                                if( u.get_cargo_space_left() >= resource_amount and 
-                                    target_unit.get_cargo_space_left() >= resource_amount ):
+                                if(u.get_cargo_space_left() >= resource_amount and
+                                        target_unit.get_cargo_space_left() >= resource_amount):
                                     # Both units can accept all our resources. Prioritize one that is most-full.
                                     if u.get_cargo_space_left() < target_unit.get_cargo_space_left():
                                         # This new target it better, it has less space left and can take all our
                                         # resources
                                         target_unit = u
-                                    
-                                elif( target_unit.get_cargo_space_left() >= resource_amount ):
+
+                                elif(target_unit.get_cargo_space_left() >= resource_amount):
                                     # Don't change targets. Current one is best since it can take all
                                     # the resources, but new target can't.
                                     pass
-                                    
-                                elif( u.get_cargo_space_left() > target_unit.get_cargo_space_left() ):
-                                    # Change targets, because neither target can accept all our resources and 
+
+                                elif(u.get_cargo_space_left() > target_unit.get_cargo_space_left()):
+                                    # Change targets, because neither target can accept all our resources and
                                     # this target can take more resources.
                                     target_unit = u
                             elif u.type == Constants.UNIT_TYPES.CART:
                                 # Transfer to this cart instead of the current worker target
                                 target_unit = u
-    
+
     # Build the transfer action request
     target_unit_id = None
     if target_unit is not None:
@@ -96,12 +98,14 @@ def smart_transfer_to_nearby(game, team, unit_id, unit, target_type_restriction=
         # Update the transfer amount based on the room of the target
         if target_unit.get_cargo_space_left() < resource_amount:
             resource_amount = target_unit.get_cargo_space_left()
-    
+
     return TransferAction(team, unit_id, target_unit_id, resource_type, resource_amount)
 
 ########################################################################################################################
 # This is the Agent that you need to design for the competition
 ########################################################################################################################
+
+
 class AgentPolicy(AgentWithModel):
     def __init__(self, mode="train", model=None) -> None:
         """
@@ -115,13 +119,18 @@ class AgentPolicy(AgentWithModel):
         # They must be gym.spaces objects
         # Example when using discrete actions:
         self.actions_units = [
-            partial(MoveAction, direction=Constants.DIRECTIONS.CENTER),  # This is the do-nothing action
+            # This is the do-nothing action
+            partial(MoveAction, direction=Constants.DIRECTIONS.CENTER),
             partial(MoveAction, direction=Constants.DIRECTIONS.NORTH),
             partial(MoveAction, direction=Constants.DIRECTIONS.WEST),
             partial(MoveAction, direction=Constants.DIRECTIONS.SOUTH),
             partial(MoveAction, direction=Constants.DIRECTIONS.EAST),
-            partial(smart_transfer_to_nearby, target_type_restriction=Constants.UNIT_TYPES.CART), # Transfer to nearby cart
-            partial(smart_transfer_to_nearby, target_type_restriction=Constants.UNIT_TYPES.WORKER), # Transfer to nearby worker
+            # Transfer to nearby cart
+            partial(smart_transfer_to_nearby,
+                    target_type_restriction=Constants.UNIT_TYPES.CART),
+            # Transfer to nearby worker
+            partial(smart_transfer_to_nearby,
+                    target_type_restriction=Constants.UNIT_TYPES.WORKER),
             SpawnCityAction,
             PillageAction,
         ]
@@ -130,7 +139,8 @@ class AgentPolicy(AgentWithModel):
             SpawnCartAction,
             ResearchAction,
         ]
-        self.action_space = spaces.Discrete(max(len(self.actions_units), len(self.actions_cities)))
+        self.action_space = spaces.Discrete(
+            max(len(self.actions_units), len(self.actions_cities)))
 
         # Observation space: (Basic minimum for a miner agent)
         # Object:
@@ -171,8 +181,8 @@ class AgentPolicy(AgentWithModel):
         #   1x researched coal [cur player]
         #   1x researched uranium [cur player]
         self.observation_shape = (3 + 7 * 5 * 2 + 1 + 1 + 1 + 2 + 2 + 2 + 3,)
-        self.observation_space = spaces.Box(low=0, high=1, shape=
-        self.observation_shape, dtype=np.float16)
+        self.observation_space = spaces.Box(
+            low=0, high=1, shape=self.observation_shape, dtype=np.float16)
 
         self.object_nodes = {}
 
@@ -200,7 +210,8 @@ class AgentPolicy(AgentWithModel):
             # Add resources
             for cell in game.map.resources:
                 if cell.resource.type not in self.object_nodes:
-                    self.object_nodes[cell.resource.type] = np.array([[cell.pos.x, cell.pos.y]])
+                    self.object_nodes[cell.resource.type] = np.array(
+                        [[cell.pos.x, cell.pos.y]])
                 else:
                     self.object_nodes[cell.resource.type] = np.concatenate(
                         (
@@ -224,8 +235,7 @@ class AgentPolicy(AgentWithModel):
                             (
                                 self.object_nodes[key],
                                 [[u.pos.x, u.pos.y]]
-                            )
-                            , axis=0
+                            ), axis=0
                         )
 
             # Add your own and opponent cities
@@ -236,14 +246,14 @@ class AgentPolicy(AgentWithModel):
                         key = "city_opponent"
 
                     if key not in self.object_nodes:
-                        self.object_nodes[key] = np.array([[cells.pos.x, cells.pos.y]])
+                        self.object_nodes[key] = np.array(
+                            [[cells.pos.x, cells.pos.y]])
                     else:
                         self.object_nodes[key] = np.concatenate(
                             (
                                 self.object_nodes[key],
                                 [[cells.pos.x, cells.pos.y]]
-                            )
-                            , axis=0
+                            ), axis=0
                         )
 
         # Observation space: (Basic minimum for a miner agent)
@@ -285,7 +295,7 @@ class AgentPolicy(AgentWithModel):
         #   1x researched coal [cur player]
         #   1x researched uranium [cur player]
         obs = np.zeros(self.observation_shape)
-        
+
         # Update the type of this object
         #   1x is worker
         #   1x is cart
@@ -293,13 +303,13 @@ class AgentPolicy(AgentWithModel):
         observation_index = 0
         if unit is not None:
             if unit.type == Constants.UNIT_TYPES.WORKER:
-                obs[observation_index] = 1.0 # Worker
+                obs[observation_index] = 1.0  # Worker
             else:
-                obs[observation_index+1] = 1.0 # Cart
+                obs[observation_index + 1] = 1.0  # Cart
         if city_tile is not None:
-            obs[observation_index+2] = 1.0 # CityTile
+            obs[observation_index + 2] = 1.0  # CityTile
         observation_index += 3
-        
+
         pos = None
         if unit is not None:
             pos = unit.pos
@@ -318,7 +328,7 @@ class AgentPolicy(AgentWithModel):
                     Constants.RESOURCE_TYPES.COAL,
                     Constants.RESOURCE_TYPES.URANIUM,
                     "city",
-                    str(Constants.UNIT_TYPES.WORKER)]:
+                        str(Constants.UNIT_TYPES.WORKER)]:
                     # Process the direction to and distance to this object type
 
                     # Encode the direction to the nearest object (excluding itself)
@@ -327,11 +337,14 @@ class AgentPolicy(AgentWithModel):
                     if key in self.object_nodes:
                         if (
                                 (key == "city" and city_tile is not None) or
-                                (unit is not None and str(unit.type) == key and len(game.map.get_cell_by_pos(unit.pos).units) <= 1 )
+                                (unit is not None and str(unit.type) == key and len(
+                                    game.map.get_cell_by_pos(unit.pos).units) <= 1)
                         ):
                             # Filter out the current unit from the closest-search
-                            closest_index = closest_node((pos.x, pos.y), self.object_nodes[key])
-                            filtered_nodes = np.delete(self.object_nodes[key], closest_index, axis=0)
+                            closest_index = closest_node(
+                                (pos.x, pos.y), self.object_nodes[key])
+                            filtered_nodes = np.delete(
+                                self.object_nodes[key], closest_index, axis=0)
                         else:
                             filtered_nodes = self.object_nodes[key]
 
@@ -340,11 +353,13 @@ class AgentPolicy(AgentWithModel):
                             obs[observation_index + 5] = 1.0
                         else:
                             # There is another object of this type
-                            closest_index = distance_function((pos.x, pos.y), filtered_nodes)
+                            closest_index = distance_function(
+                                (pos.x, pos.y), filtered_nodes)
 
                             if closest_index is not None and closest_index >= 0:
                                 closest = filtered_nodes[closest_index]
-                                closest_position = Position(closest[0], closest[1])
+                                closest_position = Position(
+                                    closest[0], closest[1])
                                 direction = pos.direction_to(closest_position)
                                 mapping = {
                                     Constants.DIRECTIONS.CENTER: 0,
@@ -353,25 +368,30 @@ class AgentPolicy(AgentWithModel):
                                     Constants.DIRECTIONS.SOUTH: 3,
                                     Constants.DIRECTIONS.EAST: 4,
                                 }
-                                obs[observation_index + mapping[direction]] = 1.0  # One-hot encoding direction
+                                # One-hot encoding direction
+                                obs[observation_index + mapping[direction]] = 1.0
 
                                 # 0 to 1 distance
                                 distance = pos.distance_to(closest_position)
-                                obs[observation_index + 5] = min(distance / 20.0, 1.0)
+                                obs[observation_index +
+                                    5] = min(distance / 20.0, 1.0)
 
                                 # 0 to 1 value (amount of resource, cargo for unit, or fuel for city)
                                 if key == "city":
                                     # City fuel as % of upkeep for 200 turns
-                                    c = game.cities[game.map.get_cell_by_pos(closest_position).city_tile.city_id]
+                                    c = game.cities[game.map.get_cell_by_pos(
+                                        closest_position).city_tile.city_id]
                                     obs[observation_index + 6] = min(
-                                        c.fuel / (c.get_light_upkeep() * 200.0),
+                                        c.fuel /
+                                        (c.get_light_upkeep() * 200.0),
                                         1.0
                                     )
                                 elif key in [Constants.RESOURCE_TYPES.WOOD, Constants.RESOURCE_TYPES.COAL,
                                              Constants.RESOURCE_TYPES.URANIUM]:
                                     # Resource amount
                                     obs[observation_index + 6] = min(
-                                        game.map.get_cell_by_pos(closest_position).resource.amount / 500,
+                                        game.map.get_cell_by_pos(
+                                            closest_position).resource.amount / 500,
                                         1.0
                                     )
                                 else:
@@ -400,7 +420,8 @@ class AgentPolicy(AgentWithModel):
         observation_index += 1
 
         #   1x percent of game done
-        obs[observation_index] = game.state["turn"] / GAME_CONSTANTS["PARAMETERS"]["MAX_DAYS"]
+        obs[observation_index] = game.state["turn"] / \
+            GAME_CONSTANTS["PARAMETERS"]["MAX_DAYS"]
         observation_index += 1
 
         #   2x citytile counts [cur player, opponent]
@@ -409,17 +430,21 @@ class AgentPolicy(AgentWithModel):
         max_count = 30
         for key in ["city", str(Constants.UNIT_TYPES.WORKER), str(Constants.UNIT_TYPES.CART)]:
             if key in self.object_nodes:
-                obs[observation_index] = len(self.object_nodes[key]) / max_count
+                obs[observation_index] = len(
+                    self.object_nodes[key]) / max_count
             if (key + "_opponent") in self.object_nodes:
-                obs[observation_index + 1] = len(self.object_nodes[(key + "_opponent")]) / max_count
+                obs[observation_index +
+                    1] = len(self.object_nodes[(key + "_opponent")]) / max_count
             observation_index += 2
 
         #   1x research points [cur player]
         #   1x researched coal [cur player]
         #   1x researched uranium [cur player]
         obs[observation_index] = game.state["teamStates"][team]["researchPoints"] / 200.0
-        obs[observation_index+1] = float(game.state["teamStates"][team]["researched"]["coal"])
-        obs[observation_index+2] = float(game.state["teamStates"][team]["researched"]["uranium"])
+        obs[observation_index +
+            1] = float(game.state["teamStates"][team]["researched"]["coal"])
+        obs[observation_index +
+            2] = float(game.state["teamStates"][team]["researched"]["uranium"])
 
         return obs
 
@@ -439,9 +464,9 @@ class AgentPolicy(AgentWithModel):
             elif unit is not None:
                 x = unit.pos.x
                 y = unit.pos.y
-            
+
             if city_tile != None:
-                action =  self.actions_cities[action_code%len(self.actions_cities)](
+                action = self.actions_cities[action_code % len(self.actions_cities)](
                     game=game,
                     unit_id=unit.id if unit else None,
                     unit=unit,
@@ -452,7 +477,7 @@ class AgentPolicy(AgentWithModel):
                     y=y
                 )
             else:
-                action =  self.actions_units[action_code%len(self.actions_units)](
+                action = self.actions_units[action_code % len(self.actions_units)](
                     game=game,
                     unit_id=unit.id if unit else None,
                     unit=unit,
@@ -462,7 +487,7 @@ class AgentPolicy(AgentWithModel):
                     x=x,
                     y=y
                 )
-            
+
             return action
         except Exception as e:
             # Not a valid action
@@ -474,7 +499,8 @@ class AgentPolicy(AgentWithModel):
         Takes an action in the environment according to actionCode:
             actionCode: Index of action to take into the action array.
         """
-        action = self.action_code_to_action(action_code, game, unit, city_tile, team)
+        action = self.action_code_to_action(
+            action_code, game, unit, city_tile, team)
         self.match_controller.take_action(action)
 
     def game_start(self, game):
@@ -491,6 +517,23 @@ class AgentPolicy(AgentWithModel):
         self.city_tiles_last = 0
         self.fuel_collected_last = 0
 
+    def game_start(self, game):
+        """
+        This function is called at the start of each game. Use this to
+        reset and initialize per game. Note that self.team may have
+        been changed since last game. The game map has been created
+        and starting units placed.
+
+        Args:
+            game ([type]): Game.
+        """
+        self.units_last = 0
+        self.city_tiles_last = 0
+        self.fuel_collected_last = 0
+        self.o_units_last = 0
+        self.o_city_tiles_last = 0
+        self.o_fuel_collected_last = 0
+
     def get_reward(self, game, is_game_finished, is_new_turn, is_game_error):
         """
         Returns the reward function for this step of the game. Reward should be a
@@ -506,8 +549,13 @@ class AgentPolicy(AgentWithModel):
             return 0
 
         # Get some basic stats
+        difficulty = 0.2
         unit_count = len(game.state["teamStates"][self.team]["units"])
-
+        opponent_unit_count = len(
+            game.state["teamStates"][1 - self.team]["units"])
+        reserach_points_count = game.state["teamStates"][self.team]["researchPoints"]
+        reserach_points_c_opponent = game.state["teamStates"][1 -
+                                                              self.team]["researchPoints"]
         city_count = 0
         city_count_opponent = 0
         city_tile_count = 0
@@ -523,36 +571,46 @@ class AgentPolicy(AgentWithModel):
                     city_tile_count += 1
                 else:
                     city_tile_count_opponent += 1
-        
+
         rewards = {}
-        
+        # turn =game.state["turn"]
+        # if turn %40 >25:
+        #     build=0.2
+        # else:
+        #     build=1
         # Give a reward for unit creation/death. 0.05 reward per unit.
-        rewards["rew/r_units"] = (unit_count - self.units_last) * 0.05
+        rewards["rew/r_units"] = (unit_count - self.units_last -
+                                  difficulty * (opponent_unit_count - self.o_units_last)) * 1
         self.units_last = unit_count
-
+        self.o_units_last = opponent_unit_count
         # Give a reward for city creation/death. 0.1 reward per city.
-        rewards["rew/r_city_tiles"] = (city_tile_count - self.city_tiles_last) * 0.1
+        rewards["rew/r_city_tiles"] = (city_tile_count - self.city_tiles_last + difficulty *
+                                       self.o_city_tiles_last - difficulty * city_tile_count_opponent) * 3
         self.city_tiles_last = city_tile_count
-
+        self.o_city_tiles_last = city_tile_count_opponent
+        rewards["rew/r_reserach_points"] = (
+            reserach_points_count - difficulty * reserach_points_c_opponent) / 100
         # Reward collecting fuel
         fuel_collected = game.stats["teamStats"][self.team]["fuelGenerated"]
-        rewards["rew/r_fuel_collected"] = ( (fuel_collected - self.fuel_collected_last) / 20000 )
+       # fuel_collected_opponent = game.stats["teamStats"][1-self.team]["fuelGenerated"]
+        rewards["rew/r_fuel_collected"] = (
+            (fuel_collected - self.fuel_collected_last) / 200)
         self.fuel_collected_last = fuel_collected
-        
-        # Give a reward of 1.0 per city tile alive at the end of the game
-        rewards["rew/r_city_tiles_end"] = 0
-        if is_game_finished:
-            self.is_last_turn = True
-            rewards["rew/r_city_tiles_end"] = city_tile_count
 
-            '''
+        # Give a reward of 1.0 per city tile alive at the end of the game
+        # rewards["rew/r_city_tiles_end"] = 0
+        # if is_game_finished:
+        #     self.is_last_turn = True
+        #     rewards["rew/r_city_tiles_end"] = city_tile_count
+
+        '''
             # Example of a game win/loss reward instead
             if game.get_winning_team() == self.team:
                 rewards["rew/r_game_win"] = 100.0 # Win
             else:
                 rewards["rew/r_game_win"] = -100.0 # Loss
             '''
-        
+
         reward = 0
         for name, value in rewards.items():
             reward += value
@@ -570,6 +628,3 @@ class AgentPolicy(AgentWithModel):
             is_first_turn (bool): True if it's the first turn of a game.
         """
         return
-
-    
-

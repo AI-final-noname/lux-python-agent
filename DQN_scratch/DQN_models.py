@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 from luxai2021.env.lux_env import LuxEnvironment
 from utilities import ReplayBuffer, Net, PriortizedMemory
+from tqdm import tqdm
 
 
 class DQN():
@@ -88,9 +89,9 @@ class DQN():
         loss.backward()
         self.optimizer.step()
 
-    def train(self, step_count=1000000):  # main train function
+    def train(self, file_prefix, step_count=1000000, save_freq=50000):  # main train function
         state = self.env.reset()
-        for _ in range(step_count):
+        for _ in tqdm(range(step_count)):
             self.count += 1
             action = self.choose_action(state)
             obs, reward, done, _ = self.env.step(action)
@@ -99,6 +100,8 @@ class DQN():
                 self.learn()
             if done:
                 self.env.reset()
+            if self.count % save_freq == 0:
+                self.save(file_prefix + f'_{self.count}.qt')
 
     def predict(self, obs, deterministic=False):  # agent.py
         with torch.no_grad():
@@ -107,11 +110,11 @@ class DQN():
             action = int(torch.argmax(Q).numpy())
         return action, None
 
-    def save(self, path):  # lux_env.py
-        pass
+    def save(self, filename):  # lux_env.py
+        torch.save(self.target_net.state_dict(), filename)
 
-    def load(self, path):  # ranking
-        pass
+    def load(self, filename):  # ranking
+        self.target_net.load_state_dict(torch.load(filename))
 
 
 class DDQN(DQN):

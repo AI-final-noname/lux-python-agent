@@ -4,7 +4,6 @@ import os
 import sys
 import random
 
-from stable_baselines3 import PPO, DQN  # pip install stable-baselines3
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.utils import set_random_seed, get_schedule_fn
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -13,7 +12,7 @@ from agent_policy import AgentPolicy
 from luxai2021.env.agent import Agent
 from luxai2021.env.lux_env import LuxEnvironment, SaveReplayAndModelCallback
 from luxai2021.game.constants import LuxMatchConfigs_Default
-from DQN_models import DDQN, PrioritizedReplayDDQN
+from DQN_models import DQN, DDQN, PrioritizedReplayDDQN
 
 
 # https://stable-baselines3.readthedocs.io/en/master/guide/examples.html?highlight=SubprocVecEnv#multiprocessing-unleashing-the-power-of-vectorized-environments
@@ -73,6 +72,39 @@ def train(args):
     configs["width"] = 12
     configs["height"] = 12
     opponent = Agent()
+
+    # DQN
+    for i in range(2):
+        player = AgentPolicy(mode='train')
+
+        env = LuxEnvironment(configs=configs,
+                             learning_agent=player,
+                             opponent_agent=opponent)
+
+        model = DQN(env)
+
+        model.train(
+            f'./models/DQN_scratch_DQN/{i}')
+        opponent = AgentPolicy(mode='inference', model=model)
+
+    # DDQN
+    opponent = Agent()
+    for i in range(2):
+        player = AgentPolicy(mode='train')
+
+        env = LuxEnvironment(configs=configs,
+                             learning_agent=player,
+                             opponent_agent=opponent)
+
+        model = DDQN(env)
+
+        print('Training model...')
+        model.train(
+            f'./models/DQN_scratch_DDQN/{i}')
+        opponent = AgentPolicy(mode='inference', model=model)
+
+    # PrioritizedReplayDDQN
+    opponent = Agent()
     for i in range(2):
         player = AgentPolicy(mode='train')
 
@@ -82,9 +114,9 @@ def train(args):
 
         model = PrioritizedReplayDDQN(env)
 
-        print('Training model...')
-        model.train(step_count=10000)
-        print('Done Training model.')
+        model.train(
+            f'./models/DQN_scratch_PrioritizedReplayDDQN/{i}')
+        opponent = AgentPolicy(mode='inference', model=model)
 
         # opponent = AgentPolicy(mode="inference", model=model)
 
