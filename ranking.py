@@ -5,6 +5,7 @@ import io
 
 from functools import cmp_to_key
 from stable_baselines3 import PPO, DQN
+import DQN_scratch.DQN_models as scratch
 from luxai2021.env.agent import Agent
 from luxai2021.env.lux_env import LuxEnvironment
 from luxai2021.game.constants import LuxMatchConfigs_Default
@@ -29,6 +30,12 @@ def rank(directories, matches):
                 if algo == 'DQN':
                     model = DQN.load(path)
                 elif algo == 'PPO':
+                    model = PPO.load(path)
+                elif algo == 'DQN_scratch':
+                    model = PPO.load(path)
+                elif algo == 'DDQN':
+                    model = PPO.load(path)
+                elif algo == 'PRDQN':
                     model = PPO.load(path)
                 else:
                     raise ValueError(f'Algorithm {algo} not found.')
@@ -62,6 +69,8 @@ def rank(directories, matches):
             else:
                 win_j += 1
         return win_i - win_j
+
+    print('Hi')
 
     models.sort(key=cmp_to_key(match), reverse=True)
     for i in range(n):

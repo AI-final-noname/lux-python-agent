@@ -2,11 +2,12 @@ import torch
 import torch.nn as nn
 import numpy as np
 from luxai2021.env.lux_env import LuxEnvironment
-from utilities import ReplayBuffer, Net, PriortizedMemory
+from .utilities import ReplayBuffer, Net, PriortizedMemory
+from tqdm import tqdm
 
 
 class DQN():
-    def __init__(self, env, epsilon=0.05, learning_rate=0.0001, GAMMA=0.99, batch_size=32, capacity=10000):
+    def __init__(self, env, epsilon=0.05, learning_rate=0.0001, GAMMA=0.99, batch_size=32, capacity=10000, n_actions=9):
         """
         Hyperparameters:
             epsilon: Determines the explore/expliot rate of the agent
@@ -16,17 +17,20 @@ class DQN():
             capacity: the size of the replay buffer/memory
         """
         self.env = env
+
         self.count = 0  # recording the number of iterations
-        self.n_actions = max(len(self.env.learning_agent.actions_units), len(
-            self.env.learning_agent.actions_cities))
 
         self.epsilon = epsilon
         self.learning_rate = learning_rate
         self.gamma = GAMMA
-        self.batch_size = batch_size
         self.capacity = capacity
+        self.batch_size = batch_size
+        self.n_actions = n_actions
 
         self.buffer = ReplayBuffer(self.capacity)
+
+        if env == None:
+            return
         # the evaluate network
         self.evaluate_net = Net(
             self.env.learning_agent.observation_shape[0], self.n_actions)
@@ -88,9 +92,9 @@ class DQN():
         loss.backward()
         self.optimizer.step()
 
-    def train(self, step_count=1000000):  # main train function
+    def train(self, file_prefix, step_count=1000000, save_freq=50000):  # main train function
         state = self.env.reset()
-        for _ in range(step_count):
+        for _ in tqdm(range(step_count)):
             self.count += 1
             action = self.choose_action(state)
             obs, reward, done, _ = self.env.step(action)
@@ -99,6 +103,8 @@ class DQN():
                 self.learn()
             if done:
                 self.env.reset()
+            if self.count % save_freq == 0:
+                self.save(file_prefix + f'_{self.count}.qt')
 
     def predict(self, obs, deterministic=False):  # agent.py
         with torch.no_grad():
@@ -107,11 +113,15 @@ class DQN():
             action = int(torch.argmax(Q).numpy())
         return action, None
 
-    def save(self, path):  # lux_env.py
-        pass
+    def save(self, filename):  # lux_env.py
+        torch.save(self.target_net.state_dict(), filename)
 
-    def load(self, path):  # ranking
-        pass
+    @classmethod
+    def load(cls, filename):  # ranking
+        ret = cls(None)
+        ret.target_net = Net(85, ret.n_actions)
+        ret.target_net.load_state_dict(torch.load(filename))
+        return ret
 
 
 class DDQN(DQN):
