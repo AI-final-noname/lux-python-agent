@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 import numpy as np
 from luxai2021.env.lux_env import LuxEnvironment
-from utilities import ReplayBuffer, Net, PriortizedMemory
+from .utilities import ReplayBuffer, Net, PriortizedMemory
 from tqdm import tqdm
 
 
 class DQN():
-    def __init__(self, env, epsilon=0.05, learning_rate=0.0001, GAMMA=0.99, batch_size=32, capacity=10000):
+    def __init__(self, env, epsilon=0.05, learning_rate=0.0001, GAMMA=0.99, batch_size=32, capacity=10000, n_actions=9):
         """
         Hyperparameters:
             epsilon: Determines the explore/expliot rate of the agent
@@ -17,17 +17,20 @@ class DQN():
             capacity: the size of the replay buffer/memory
         """
         self.env = env
+
         self.count = 0  # recording the number of iterations
-        self.n_actions = max(len(self.env.learning_agent.actions_units), len(
-            self.env.learning_agent.actions_cities))
 
         self.epsilon = epsilon
         self.learning_rate = learning_rate
         self.gamma = GAMMA
-        self.batch_size = batch_size
         self.capacity = capacity
+        self.batch_size = batch_size
+        self.n_actions = n_actions
 
         self.buffer = ReplayBuffer(self.capacity)
+
+        if env == None:
+            return
         # the evaluate network
         self.evaluate_net = Net(
             self.env.learning_agent.observation_shape[0], self.n_actions)
@@ -113,8 +116,12 @@ class DQN():
     def save(self, filename):  # lux_env.py
         torch.save(self.target_net.state_dict(), filename)
 
-    def load(self, filename):  # ranking
-        self.target_net.load_state_dict(torch.load(filename))
+    @classmethod
+    def load(cls, filename):  # ranking
+        ret = cls(None)
+        ret.target_net = Net(85, ret.n_actions)
+        ret.target_net.load_state_dict(torch.load(filename))
+        return ret
 
 
 class DDQN(DQN):
