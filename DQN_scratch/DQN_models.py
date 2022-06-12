@@ -92,7 +92,7 @@ class DQN():
         loss.backward()
         self.optimizer.step()
 
-    def train(self, file_prefix, step_count=1000000, save_freq=50000):  # main train function
+    def train(self, file_prefix, step_count=300000, save_freq=100000):  # main train function
         state = self.env.reset()
         for _ in tqdm(range(step_count)):
             self.count += 1

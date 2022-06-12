@@ -629,9 +629,10 @@ class Game:
             return Constants.TEAM.B
 
         # if still undecided, for now, go by random choice
-        if random.random() > 0.5:
-            return Constants.TEAM.A
-        return Constants.TEAM.B
+        # if random.random() > 0.5:
+        #     return Constants.TEAM.A
+        # return Constants.TEAM.B
+        return -1
 
     def log(self, text):
         """
