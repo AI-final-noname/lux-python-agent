@@ -87,4 +87,4 @@ if __name__ == '__main__':
     with open('agents.txt') as f:
         directories = map(lambda line: tuple(line.split()), f.readlines())
         for idx, directory in enumerate(directories):
-            rank([directory], f'result/{idx}.txt')
+            rank([directory], f'result/kirito_PPO_DQN/{idx}.txt')
