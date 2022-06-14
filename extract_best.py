@@ -11,6 +11,7 @@ for i in range(5):
             agents = rows[0]
             win = rows[1:]
 
+            agent_list = []
             best_win_rate, best_model = 0.0, ''
             for k in range(6):
                 win_rate = 0.0
@@ -21,5 +22,4 @@ for i in range(5):
                 if win_rate >= best_win_rate:
                     best_win_rate = win_rate
                     best_model = agents[k]
-
             print(agent_place[j], best_model, algo[j])

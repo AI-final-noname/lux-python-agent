@@ -573,19 +573,21 @@ class AgentPolicy(AgentWithModel):
                     city_tile_count_opponent += 1
 
         rewards = {}
-        # turn =game.state["turn"]
-        # if turn %40 >25:
-        #     build=0.2
-        # else:
-        #     build=1
+        turn = game.state["turn"]
+        '''if turn %40 >25:
+              build=0.5
+        else:
+              build=1'''
+        turn_loss = 0.998**(turn + 1)
+        ins_turn_loss = 1 / turn_loss
         # Give a reward for unit creation/death. 0.05 reward per unit.
-        rewards["rew/r_units"] = (unit_count - self.units_last -
-                                  difficulty * (opponent_unit_count - self.o_units_last)) * 1
+        rewards["rew/r_units"] = (unit_count - self.units_last - difficulty * (
+            opponent_unit_count - self.o_units_last)) * 1 * turn_loss
         self.units_last = unit_count
         self.o_units_last = opponent_unit_count
         # Give a reward for city creation/death. 0.1 reward per city.
         rewards["rew/r_city_tiles"] = (city_tile_count - self.city_tiles_last + difficulty *
-                                       self.o_city_tiles_last - difficulty * city_tile_count_opponent) * 3
+                                       self.o_city_tiles_last - difficulty * city_tile_count_opponent) * 3 * ins_turn_loss
         self.city_tiles_last = city_tile_count
         self.o_city_tiles_last = city_tile_count_opponent
         rewards["rew/r_reserach_points"] = (

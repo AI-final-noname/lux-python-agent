@@ -1,7 +1,5 @@
 import os
 import importlib
-import sys
-import io
 
 from stable_baselines3 import PPO, DQN
 import DQN_scratch.DQN_models as scratch
@@ -17,29 +15,28 @@ class Model:
         self.agent = agent
 
 
-def rank(directories, filename, matches=100):
+def rank(directory, matches=1):
     models = []
-    for agent_dir, model_dir, algo in directories:
-        for f in os.listdir(model_dir):
-            if f.endswith('.zip') or f.endswith('.qt'):
-                path = os.path.join(model_dir, f)
-                if algo == 'DQN':
-                    model = DQN.load(path)
-                elif algo == 'PPO':
-                    model = PPO.load(path)
-                elif algo == 'DQN_scratch':
-                    model = scratch.DQN.load(path)
-                elif algo == 'DDQN':
-                    model = scratch.DDQN.load(path)
-                elif algo == 'PRDQN':
-                    model = scratch.PrioritizedReplayDDQN.load(path)
-                else:
-                    raise ValueError(f'Algorithm {algo} not found.')
+    agent_path, model_dir, algo, filename = directory
+    for f in os.listdir(model_dir):
+        if f.endswith('.zip') or f.endswith('.qt'):
+            path = os.path.join(model_dir, f)
+            if algo == 'DQN':
+                model = DQN.load(path)
+            elif algo == 'PPO':
+                model = PPO.load(path)
+            elif algo == 'DQN_scratch':
+                model = scratch.DQN.load(path)
+            elif algo == 'DDQN':
+                model = scratch.DDQN.load(path)
+            elif algo == 'PRDQN':
+                model = scratch.PrioritizedReplayDDQN.load(path)
+            else:
+                raise ValueError(f'Algorithm {algo} not found.')
 
-                agent_policy_path = agent_dir + '.agent_policy'
-                agent_policy = importlib.import_module(agent_policy_path)
-                agent = agent_policy.AgentPolicy(mode='inference', model=model)
-                models.append(Model(path, agent))
+            agent_policy = importlib.import_module(agent_path)
+            agent = agent_policy.AgentPolicy(mode='inference', model=model)
+            models.append(Model(path, agent))
 
     n = len(models)
 
@@ -53,8 +50,6 @@ def rank(directories, filename, matches=100):
         env.run_no_learn()
         return env.game.get_winning_team()
 
-    # run several matches between i and j, output the stronger side
-    # >0: i, =0: tie, <0: j
     def match(model_i, model_j):
         points_i, points_j = 0.0, 0.0
         agent_i, agent_j = model_i.agent, model_j.agent
@@ -86,5 +81,5 @@ def rank(directories, filename, matches=100):
 if __name__ == '__main__':
     with open('agents.txt') as f:
         directories = map(lambda line: tuple(line.split()), f.readlines())
-        for idx, directory in enumerate(directories):
-            rank([directory], f'result/kirito_PPO_DQN/{idx}.txt')
+        for directory in directories:
+            rank(directory)

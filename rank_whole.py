@@ -1,7 +1,5 @@
 import os
 import importlib
-import sys
-import io
 
 from stable_baselines3 import PPO, DQN
 import DQN_scratch.DQN_models as scratch
