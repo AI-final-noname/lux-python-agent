@@ -1,4 +1,4 @@
-# Playing LUX AI using Reinforcement
+# Playing LUX AI using Reinforcement Learning
 
 ![](https://raw.githubusercontent.com/Lux-AI-Challenge/Lux-Design-2021/master/assets/daynightshift.gif)
 
